@@ -106,11 +106,13 @@ extern  int uiWindowFullscreen(uiWindow *w);
 extern  void uiWindowSetFullscreen(uiWindow *w, int fullscreen);
 extern  void uiWindowOnContentSizeChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data);
 extern  void uiWindowOnClosing(uiWindow *w, int (*f)(uiWindow *w, void *data), void *data);
+extern  void uiWindowOnFocusChanged(uiWindow *w, void (*f)(uiWindow *sender, void *senderData), void *data);
 extern  int uiWindowBorderless(uiWindow *w);
 extern  void uiWindowSetBorderless(uiWindow *w, int borderless);
 extern  void uiWindowSetChild(uiWindow *w, uiControl *child);
 extern  int uiWindowMargined(uiWindow *w);
 extern  void uiWindowSetMargined(uiWindow *w, int margined);
+extern  void uiWindowSetResizeable(uiWindow *w, int resizeable);
 extern  uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar);
 typedef struct  uiControl uiButton ;
 extern  char *uiButtonText(uiButton *b);
@@ -167,7 +169,11 @@ extern  uiSpinbox *uiNewSpinbox(int min, int max);
 typedef struct  uiControl uiSlider ;
 extern  int uiSliderValue(uiSlider *s);
 extern  void uiSliderSetValue(uiSlider *s, int value);
+extern  int uiSliderHasToolTip(uiSlider *s);
+extern  void uiSliderSetHasToolTip(uiSlider *s, int hasToolTip);
 extern  void uiSliderOnChanged(uiSlider *s, void (*f)(uiSlider *s, void *data), void *data);
+extern  void uiSliderOnReleased(uiSlider *s, void (*f)(uiSlider *sender, void *senderData), void *data);
+extern  void uiSliderSetRange(uiSlider *s, int min, int max);
 extern  uiSlider *uiNewSlider(int min, int max);
 typedef struct  uiControl uiProgressBar ;
 extern  int uiProgressBarValue(uiProgressBar *p);
@@ -178,6 +184,10 @@ extern  uiSeparator *uiNewHorizontalSeparator(void);
 extern  uiSeparator *uiNewVerticalSeparator(void);
 typedef struct  uiControl uiCombobox ;
 extern  void uiComboboxAppend(uiCombobox *c, const char *text);
+extern  void uiComboboxInsertAt(uiCombobox *c, int index, const char *text);
+extern  void uiComboboxDelete(uiCombobox *c, int index);
+extern  void uiComboboxClear(uiCombobox *c);
+extern  int uiComboboxNumItems(uiCombobox *c);
 extern  int uiComboboxSelected(uiCombobox *c);
 extern  void uiComboboxSetSelected(uiCombobox *c, int n);
 extern  void uiComboboxOnSelected(uiCombobox *c, void (*f)(uiCombobox *c, void *data), void *data);
@@ -214,6 +224,7 @@ extern  uiMultilineEntry *uiNewNonWrappingMultilineEntry(void);
 typedef struct  uiMenuItem uiMenuItem ;
 extern  void uiMenuItemEnable(uiMenuItem *m);
 extern  void uiMenuItemDisable(uiMenuItem *m);
+extern  void uiMenuItemOnClicked(uiMenuItem *m, void (*f)(uiMenuItem *sender, uiWindow *window, void *senderData), void *data);
 extern  void uiMenuItemOnClicked(uiMenuItem *m, void (*f)(uiMenuItem *sender, uiWindow *window, void *data), void *data);
 extern  int uiMenuItemChecked(uiMenuItem *m);
 extern  void uiMenuItemSetChecked(uiMenuItem *m, int checked);
@@ -226,6 +237,7 @@ extern  uiMenuItem *uiMenuAppendAboutItem(uiMenu *m);
 extern  void uiMenuAppendSeparator(uiMenu *m);
 extern  uiMenu *uiNewMenu(const char *name);
 extern  char *uiOpenFile(uiWindow *parent);
+extern  char *uiOpenFolder(uiWindow *parent);
 extern  char *uiSaveFile(uiWindow *parent);
 extern  void uiMsgBox(uiWindow *parent, const char *title, const char *description);
 extern  void uiMsgBoxError(uiWindow *parent, const char *title, const char *description);
@@ -331,6 +343,7 @@ extern  void uiDrawPathArcTo(uiDrawPath *p, double xCenter, double yCenter, doub
 extern  void uiDrawPathBezierTo(uiDrawPath *p, double c1x, double c1y, double c2x, double c2y, double endX, double endY);
 extern  void uiDrawPathCloseFigure(uiDrawPath *p);
 extern  void uiDrawPathAddRectangle(uiDrawPath *p, double x, double y, double width, double height);
+extern  int uiDrawPathEnded(uiDrawPath *p);
 extern  void uiDrawPathEnd(uiDrawPath *p);
 extern  void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStrokeParams *p);
 extern  void uiDrawFill(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b);
@@ -453,6 +466,8 @@ struct uiFontDescriptor {    char *Family;
     uiTextItalic Italic;
     uiTextStretch Stretch;
 };
+extern  void uiLoadControlFont(uiFontDescriptor *f);
+extern  void uiFreeFontDescriptor(uiFontDescriptor *desc);
 typedef struct  uiDrawTextLayout uiDrawTextLayout ;
 typedef unsigned int uiDrawTextAlign; enum {
     uiDrawTextAlignLeft,
@@ -584,6 +599,11 @@ extern  uiTableValue *uiNewTableValueInt(int i);
 extern  int uiTableValueInt(const uiTableValue *v);
 extern  uiTableValue *uiNewTableValueColor(double r, double g, double b, double a);
 extern  void uiTableValueColor(const uiTableValue *v, double *r, double *g, double *b, double *a);
+typedef unsigned int uiSortIndicator; enum {
+    uiSortIndicatorNone,
+    uiSortIndicatorAscending,
+    uiSortIndicatorDescending
+};
 typedef struct  uiControl uiTableModel ;
 typedef struct uiTableModelHandler uiTableModelHandler;
 
@@ -639,4 +659,31 @@ extern  void uiTableAppendButtonColumn(uiTable *t,
     const char *name,
     int buttonModelColumn,
     int buttonClickableModelColumn);
+extern  int uiTableHeaderVisible(uiTable *t);
+extern  void uiTableHeaderSetVisible(uiTable *t, int visible);
 extern  uiTable *uiNewTable(uiTableParams *params);
+extern  void uiTableOnRowClicked(uiTable *t, void (*f)(uiTable *t, int row, void *data), void *data);
+extern  void uiTableOnRowDoubleClicked(uiTable *t, void (*f)(uiTable *t, int row, void *data), void *data);
+extern  void uiTableHeaderSetSortIndicator(uiTable *t, int column, uiSortIndicator indicator);
+extern  uiSortIndicator uiTableHeaderSortIndicator(uiTable *t, int column);
+extern  void uiTableHeaderOnClicked(uiTable *t, void (*f)(uiTable *sender, int column, void *senderData), void *data);
+extern  int uiTableColumnWidth(uiTable *t, int column);
+extern  void uiTableColumnSetWidth(uiTable *t, int column, int width);
+typedef unsigned int uiTableSelectionMode; enum {
+    uiTableSelectionModeNone,
+    uiTableSelectionModeZeroOrOne,  //!< Allow zero or one row to be selected.
+    uiTableSelectionModeOne,        //!< Allow for exactly one row to be selected.
+    uiTableSelectionModeZeroOrMany, //!< Allow zero or many (multiple) rows to be selected.
+};
+extern  uiTableSelectionMode uiTableGetSelectionMode(uiTable *t);
+extern  void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode);
+extern  void uiTableOnSelectionChanged(uiTable *t, void (*f)(uiTable *t, void *data), void *data);
+typedef struct uiTableSelection uiTableSelection;
+struct uiTableSelection
+{
+    int NumRows; //!< Number of selected rows.
+    int *Rows;   //!< Array containing selected row indices, NULL on empty selection.
+};
+extern  uiTableSelection* uiTableGetSelection(uiTable *t);
+extern  void uiTableSetSelection(uiTable *t, uiTableSelection *sel);
+extern  void uiFreeTableSelection(uiTableSelection* s);

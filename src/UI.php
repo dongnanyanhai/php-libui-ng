@@ -477,7 +477,7 @@ class UI
                 }
                 break;
             case 'Windows':
-                $path = 'C:\Program Files\libui\libui.dll';
+                $path = __DIR__ . '\libui.dll';
                 if (file_exists($path)) {
                     return $path;
                 }
